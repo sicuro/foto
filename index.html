@@ -130,6 +130,13 @@
               downloadThumbBtn.className = 'mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg text-xs transition';
               thumbDiv.appendChild(downloadThumbBtn);
 
+              // Botão de abrir em nova aba
+              const openNewTabBtn = document.createElement('button');
+              openNewTabBtn.type = 'button';
+              openNewTabBtn.innerText = 'Abrir imagem em nova aba';
+              openNewTabBtn.className = 'mt-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg text-xs transition';
+              thumbDiv.appendChild(openNewTabBtn);
+
               let exifForThis = '';
               infoToggle.addEventListener('change', function() {
                 if (infoToggle.checked) {
@@ -145,8 +152,7 @@
                 }
               });
 
-              downloadThumbBtn.addEventListener('click', function() {
-                // Gera imagem 1:1 com moldura branca e infos (se marcado)
+              function generateCanvasUrl() {
                 const maxSide = Math.max(img.width, img.height);
                 const quadSize = Math.round(maxSide / IMG_RATIO);
                 const canvas = document.createElement('canvas');
@@ -166,22 +172,37 @@
                 const x = (quadSize - drawWidth) / 2;
                 const y = (quadSize - drawHeight) / 2;
                 ctx.drawImage(img, x, y, drawWidth, drawHeight);
-                // Escreve infos se marcado
                 if (infoToggle.checked && exifForThis) {
                   ctx.font = Math.round(quadSize * 0.03) + 'px sans-serif';
                   ctx.fillStyle = '#444';
                   ctx.textAlign = 'center';
                   ctx.fillText(exifForThis, quadSize / 2, quadSize - quadSize * 0.03);
                 }
-                const url = canvas.toDataURL('image/png');
+                return canvas.toDataURL('image/png');
+              }
+
+              downloadThumbBtn.addEventListener('click', function() {
+                const url = generateCanvasUrl();
                 const link = document.createElement('a');
                 link.download = `foto-moldurada-1x1-${idx+1}.png`;
                 link.href = url;
-                // Compatibilidade: tenta baixar, senão abre em nova aba
                 if (typeof link.download !== 'undefined') {
                   link.click();
                 } else {
                   window.open(url, '_blank');
+                }
+              });
+
+              openNewTabBtn.addEventListener('click', function() {
+                // Abre a aba imediatamente para evitar bloqueio
+                const newTab = window.open();
+                const url = generateCanvasUrl();
+                // Cria HTML dinâmico para exibir a imagem
+                if (newTab) {
+                  newTab.document.write(`<!DOCTYPE html><html><head><title>Salvar imagem</title></head><body style='margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#f3f4f6;'><img src='${url}' style='max-width:100vw;max-height:80vh;box-shadow:0 2px 16px #0002;border-radius:16px;'><p style='font-size:14px;color:#444;font-family:sans-serif;margin-top:10px;'>Toque e segure a imagem para salvar</p></body></html>`);
+                  newTab.document.close();
+                } else {
+                  alert('Não foi possível abrir nova aba. Verifique o bloqueador de pop-ups.');
                 }
               });
 

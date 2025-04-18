@@ -96,23 +96,6 @@
         if (tags.FocalLength) parts.push(tags.FocalLength + 'mm');
         // f/Número
         if (tags.FNumber) parts.push('f/' + tags.FNumber);
-        // Tempo de exposição
-        if (tags.ExposureTime) {
-          let exp = tags.ExposureTime;
-          // Se for string tipo '1/250', mantém
-          if (typeof exp === 'string' && exp.indexOf('/') > -1) {
-            exp = exp + 's';
-          } else if (typeof exp === 'number') {
-            if (exp < 1 && exp > 0) {
-              // Converter decimal para fração (ex: 0.0125 => 1/80s)
-              const denom = Math.round(1/exp);
-              exp = `1/${denom}s`;
-            } else {
-              exp = exp.toFixed(1) + 's';
-            }
-          }
-          parts.push(exp);
-        }
         // ISO
         if (tags.ISOSpeedRatings) parts.push('ISO ' + tags.ISOSpeedRatings);
         return parts.join(' — ');

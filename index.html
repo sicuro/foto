@@ -10,41 +10,38 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <!-- JSZip CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- PWA meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
   </head>
-  <body class="bg-gradient-to-br from-gray-100 to-gray-300 min-h-screen flex flex-col items-center py-8">
-    <header class="mb-8">
-      <h1 class="text-4xl font-bold text-gray-800 drop-shadow-md">Moldure sua Foto!</h1>
-      <p class="text-gray-600 mt-2 text-center">Envie sua foto (qualquer formato) e baixe com moldura 1:1!</p>
-    </header>
-
-    <main class="w-full max-w-md bg-white rounded-xl shadow-lg p-8 flex flex-col gap-6">
-      <form id="uploadForm" class="flex flex-col gap-4">
+  <body class="bg-neutral-100 min-h-screen flex flex-col items-center justify-center p-0">
+    <main class="w-full max-w-md bg-white rounded-none shadow-none p-0 flex flex-col gap-4 min-h-screen">
+      <form id="uploadForm" class="flex flex-col gap-2 px-4 pt-8 pb-2">
         <label class="block">
-          <span class="text-gray-700 font-medium">Escolha suas fotos:</span>
-          <input id="fileInput" type="file" accept="image/*" multiple class="mt-2 block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+          <input id="fileInput" type="file" accept="image/*" multiple class="mt-2 block w-full text-base text-gray-700 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-base file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
         </label>
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">Adicionar Moldura</button>
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition text-base">Adicionar Moldura (primeira foto)</button>
       </form>
-
-      <div id="thumbsGrid" class="hidden grid grid-cols-2 gap-4 mt-6"></div>
-      <!-- Overlay para visualização em tela cheia -->
-      <div id="imageOverlay" class="fixed inset-0 bg-black bg-opacity-80 flex-col items-center justify-center z-50 hidden">
-        <img id="overlayImg" src="" alt="Imagem em tela cheia" class="max-w-full max-h-[80vh] rounded-xl shadow-lg mx-auto mt-20" />
-        <p class="text-white text-center mt-4 text-base font-medium">Toque e segure a imagem para salvar</p>
-        <button id="closeOverlayBtn" class="mt-6 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg transition mx-auto block">Fechar</button>
+      <div id="thumbsGrid" class="hidden grid grid-cols-2 gap-4 px-4 mt-4"></div>
+      <div class="flex flex-col gap-2 items-center pb-6">
+        <button id="downloadZipBtn" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition text-base">Baixar todas em ZIP</button>
       </div>
-      <div id="previewArea" class="hidden flex-col items-center gap-4">
-        <h2 class="text-lg font-semibold text-gray-700">Prévia:</h2>
-        <canvas id="canvasPreview" width="400" height="400" class="rounded-lg shadow-lg border-4 border-blue-400"></canvas>
+      <div id="previewArea" class="hidden flex-col items-center gap-4 px-4">
+        <canvas id="canvasPreview" width="400" height="400" class="rounded-xl shadow-lg border-4 border-indigo-400"></canvas>
         <div id="exifInfo" class="text-xs text-gray-600 text-center"></div>
         <button id="downloadBtn" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">Baixar Foto com Moldura</button>
       </div>
-      <div class="flex flex-col gap-2 items-center">
-        <button id="downloadZipBtn" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition">Baixar todas em ZIP</button>
-      </div>
     </main>
-
-    <footer class="mt-10 text-gray-400 text-sm">Feito com ❤️ por você</footer>
+    <!-- Overlay para visualização em tela cheia -->
+    <div id="imageOverlay" class="fixed inset-0 bg-black bg-opacity-90 flex-col items-center justify-center z-50 hidden">
+      <img id="overlayImg" src="" alt="Imagem em tela cheia" class="max-w-full max-h-[80vh] rounded-xl shadow-lg mx-auto mt-20" />
+      <p class="text-white text-center mt-4 text-base font-medium">Toque e segure a imagem para salvar</p>
+      <button id="closeOverlayBtn" class="mt-6 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg transition mx-auto block">Fechar</button>
+    </div>
+    <footer class="mt-6 text-gray-400 text-xs text-center pb-2">Feito com ❤️ por Gabriel Sicuro</footer>
 
     <script>
       // Porcentagem do lado ocupado pela foto
@@ -190,9 +187,7 @@
                   drawHeight = quadSize * IMG_RATIO;
                   drawWidth = (img.width / img.height) * drawHeight;
                 }
-                const x = (quadSize - drawWidth) / 2;
-                const y = (quadSize - drawHeight) / 2;
-                ctx.drawImage(img, x, y, drawWidth, drawHeight);
+                ctx.drawImage(img, (quadSize - drawWidth) / 2, (quadSize - drawHeight) / 2, drawWidth, drawHeight);
                 if (infoToggle.checked && exifForThis) {
                   ctx.font = Math.round(quadSize * 0.03) + 'px sans-serif';
                   ctx.fillStyle = '#444';

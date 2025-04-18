@@ -23,12 +23,10 @@
         <label class="block">
           <input id="fileInput" type="file" accept="image/*" multiple class="mt-2 block w-full text-base text-gray-700 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-base file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
         </label>
-        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition text-base">Adicionar Moldura (primeira foto)</button>
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition text-base w-full">Adicionar Moldura (primeira foto)</button>
+        <button id="downloadZipBtn" class="hidden bg-gray-100 hover:bg-gray-200 text-indigo-700 font-bold py-3 px-4 rounded-xl transition text-base w-full border border-indigo-200 mt-2">Baixar todas em ZIP</button>
       </form>
       <div id="thumbsGrid" class="hidden grid grid-cols-2 gap-4 px-4 mt-4"></div>
-      <div class="flex flex-col gap-2 items-center pb-6">
-        <button id="downloadZipBtn" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition text-base">Baixar todas em ZIP</button>
-      </div>
       <div id="previewArea" class="hidden flex-col items-center gap-4 px-4">
         <canvas id="canvasPreview" width="400" height="400" class="rounded-xl shadow-lg border-4 border-indigo-400"></canvas>
         <div id="exifInfo" class="text-xs text-gray-600 text-center"></div>
@@ -189,10 +187,21 @@
                 }
                 ctx.drawImage(img, (quadSize - drawWidth) / 2, (quadSize - drawHeight) / 2, drawWidth, drawHeight);
                 if (infoToggle.checked && exifForThis) {
+                  ctx.save();
                   ctx.font = Math.round(quadSize * 0.03) + 'px sans-serif';
                   ctx.fillStyle = '#444';
                   ctx.textAlign = 'center';
-                  ctx.fillText(exifForThis, quadSize / 2, quadSize - quadSize * 0.03);
+                  // Se for formato vertical (mais alto que largo), escreve na lateral esquerda, na vertical
+                  if (img.height > img.width * 1.25) {
+                    ctx.translate(quadSize * 0.05, quadSize / 2);
+                    ctx.rotate(-Math.PI / 2);
+                    ctx.textAlign = 'left';
+                    ctx.fillText(exifForThis, 0, 0);
+                  } else {
+                    // Embaixo, centralizado
+                    ctx.fillText(exifForThis, quadSize / 2, quadSize - quadSize * 0.03);
+                  }
+                  ctx.restore();
                 }
                 return canvas.toDataURL('image/png');
               }
@@ -242,10 +251,21 @@
         const y = (quadSize - drawHeight) / 2;
         ctx.drawImage(img, x, y, drawWidth, drawHeight);
         if (infoToggle && infoToggle.checked && exifForThis) {
+          ctx.save();
           ctx.font = Math.round(quadSize * 0.03) + 'px sans-serif';
           ctx.fillStyle = '#444';
           ctx.textAlign = 'center';
-          ctx.fillText(exifForThis, quadSize / 2, quadSize - quadSize * 0.03);
+          // Se for formato vertical (mais alto que largo), escreve na lateral esquerda, na vertical
+          if (img.height > img.width * 1.25) {
+            ctx.translate(quadSize * 0.05, quadSize / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'left';
+            ctx.fillText(exifForThis, 0, 0);
+          } else {
+            // Embaixo, centralizado
+            ctx.fillText(exifForThis, quadSize / 2, quadSize - quadSize * 0.03);
+          }
+          ctx.restore();
         }
         return canvas.toDataURL('image/png');
       }

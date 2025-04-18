@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moldura nas Fotos</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- exif-js para ler metadados -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+  </head>
+  <body class="bg-gradient-to-br from-gray-100 to-gray-300 min-h-screen flex flex-col items-center py-8">
+    <header class="mb-8">
+      <h1 class="text-4xl font-bold text-gray-800 drop-shadow-md">Moldure sua Foto!</h1>
+      <p class="text-gray-600 mt-2 text-center">Envie sua foto (qualquer formato) e baixe com moldura 1:1!</p>
+    </header>
+
+    <main class="w-full max-w-md bg-white rounded-xl shadow-lg p-8 flex flex-col gap-6">
+      <form id="uploadForm" class="flex flex-col gap-4">
+        <label class="block">
+          <span class="text-gray-700 font-medium">Escolha suas fotos:</span>
+          <input id="fileInput" type="file" accept="image/*" multiple class="mt-2 block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+        </label>
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">Adicionar Moldura</button>
+      </form>
+
+      <div id="thumbsGrid" class="hidden grid grid-cols-2 gap-4 mt-6"></div>
+      <div id="previewArea" class="hidden flex-col items-center gap-4">
+        <h2 class="text-lg font-semibold text-gray-700">Prévia:</h2>
+        <canvas id="canvasPreview" width="400" height="400" class="rounded-lg shadow-lg border-4 border-blue-400"></canvas>
+        <div id="exifInfo" class="text-xs text-gray-600 text-center"></div>
+        <button id="downloadBtn" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">Baixar Foto com Moldura</button>
+      </div>
+    </main>
+
+    <footer class="mt-10 text-gray-400 text-sm">Feito com ❤️ por você</footer>
+
+    <script>
+      // Porcentagem do lado ocupado pela foto
+      const IMG_RATIO = 0.9;
+      const PREVIEW_SIZE = 400;
+
+      const uploadForm = document.getElementById('uploadForm');
+      const fileInput = document.getElementById('fileInput');
+      const previewArea = document.getElementById('previewArea');
+      const canvasPreview = document.getElementById('canvasPreview');
+      const ctxPreview = canvasPreview.getContext('2d');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const exifInfoDiv = document.getElementById('exifInfo');
+      const thumbsGrid = document.getElementById('thumbsGrid');
+
+      let imgOriginal = null;
+      let finalImageReady = false;
+      let exifText = '';
+
+      function getExifText(exif) {
+        const make = exif.Make || '';
+        const model = exif.Model || '';
+        const lens = exif.LensModel || exif['UndefinedTag:0xA434'] || '';
+        const iso = exif.ISOSpeedRatings ? 'ISO ' + exif.ISOSpeedRatings : '';
+        const exposure = exif.ExposureTime ? exif.ExposureTime + 's' : '';
+        const fNumber = exif.FNumber ? 'f/' + exif.FNumber : '';
+        let parts = [];
+        if (make || model) parts.push((make + ' ' + model).trim());
+        if (lens) parts.push(lens);
+        if (iso) parts.push(iso);
+        if (fNumber) parts.push(fNumber);
+        if (exposure) parts.push(exposure);
+        return parts.join(' — ');
+      }
+
+      // NOVO: Multi-foto e thumbs
+      fileInput.addEventListener('change', function (e) {
+        const files = Array.from(fileInput.files);
+        thumbsGrid.innerHTML = '';
+        if (files.length === 0) {
+          thumbsGrid.classList.add('hidden');
+          return;
+        }
+        thumbsGrid.classList.remove('hidden');
+        files.forEach((file, idx) => {
+          const reader = new FileReader();
+          reader.onload = function (evt) {
+            const img = new Image();
+            img.onload = function () {
+              // Cria thumb canvas
+              const thumbCanvas = document.createElement('canvas');
+              thumbCanvas.width = 160;
+              thumbCanvas.height = 160;
+              const thumbCtx = thumbCanvas.getContext('2d');
+              // Fundo branco
+              thumbCtx.fillStyle = '#fff';
+              thumbCtx.fillRect(0, 0, 160, 160);
+              // Calcula tamanho da imagem mantendo proporção
+              let tw, th;
+              if (img.width > img.height) {
+                tw = 144;
+                th = (img.height / img.width) * 144;
+              } else {
+                th = 144;
+                tw = (img.width / img.height) * 144;
+              }
+              thumbCtx.drawImage(img, (160-tw)/2, (160-th)/2, tw, th);
+              // Container da thumb
+              const thumbDiv = document.createElement('div');
+              thumbDiv.className = 'flex flex-col items-center bg-gray-50 rounded-xl shadow p-2';
+              thumbDiv.appendChild(thumbCanvas);
+
+              // Checkbox para mostrar infos
+              const infoToggle = document.createElement('input');
+              infoToggle.type = 'checkbox';
+              infoToggle.id = 'infoToggle'+idx;
+              infoToggle.className = 'mt-2';
+              const infoLabel = document.createElement('label');
+              infoLabel.htmlFor = infoToggle.id;
+              infoLabel.innerText = 'Exibir infos';
+              infoLabel.className = 'ml-2 text-xs text-gray-600';
+
+              // Div para infos
+              const infoDiv = document.createElement('div');
+              infoDiv.className = 'text-xs text-gray-600 text-center mt-1 hidden';
+              thumbDiv.appendChild(infoToggle);
+              thumbDiv.appendChild(infoLabel);
+              thumbDiv.appendChild(infoDiv);
+
+              // Botão de download individual
+              const downloadThumbBtn = document.createElement('button');
+              downloadThumbBtn.type = 'button';
+              downloadThumbBtn.innerText = 'Baixar';
+              downloadThumbBtn.className = 'mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg text-xs transition';
+              thumbDiv.appendChild(downloadThumbBtn);
+
+              let exifForThis = '';
+              infoToggle.addEventListener('change', function() {
+                if (infoToggle.checked) {
+                  EXIF.getData(file, function () {
+                    const allExif = EXIF.getAllTags(this);
+                    exifForThis = getExifText(allExif);
+                    infoDiv.textContent = exifForThis || 'Sem informações.';
+                    infoDiv.classList.remove('hidden');
+                  });
+                } else {
+                  infoDiv.classList.add('hidden');
+                  exifForThis = '';
+                }
+              });
+
+              downloadThumbBtn.addEventListener('click', function() {
+                // Gera imagem 1:1 com moldura branca e infos (se marcado)
+                const maxSide = Math.max(img.width, img.height);
+                const quadSize = Math.round(maxSide / IMG_RATIO);
+                const canvas = document.createElement('canvas');
+                canvas.width = quadSize;
+                canvas.height = quadSize;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(0, 0, quadSize, quadSize);
+                let drawWidth, drawHeight;
+                if (img.width > img.height) {
+                  drawWidth = quadSize * IMG_RATIO;
+                  drawHeight = (img.height / img.width) * drawWidth;
+                } else {
+                  drawHeight = quadSize * IMG_RATIO;
+                  drawWidth = (img.width / img.height) * drawHeight;
+                }
+                const x = (quadSize - drawWidth) / 2;
+                const y = (quadSize - drawHeight) / 2;
+                ctx.drawImage(img, x, y, drawWidth, drawHeight);
+                // Escreve infos se marcado
+                if (infoToggle.checked && exifForThis) {
+                  ctx.font = Math.round(quadSize * 0.03) + 'px sans-serif';
+                  ctx.fillStyle = '#444';
+                  ctx.textAlign = 'center';
+                  ctx.fillText(exifForThis, quadSize / 2, quadSize - quadSize * 0.03);
+                }
+                const link = document.createElement('a');
+                link.download = `foto-moldurada-1x1-${idx+1}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+              });
+
+              thumbsGrid.appendChild(thumbDiv);
+            };
+            img.src = evt.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      // Mantém funcionalidade de preview e download para uma foto selecionada
+      uploadForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const file = fileInput.files[0];
+        if (!file) return;
+        exifText = '';
+        EXIF.getData(file, function () {
+          const allExif = EXIF.getAllTags(this);
+          exifText = getExifText(allExif);
+          exifInfoDiv.textContent = exifText;
+        });
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          const img = new Image();
+          img.onload = function () {
+            imgOriginal = img;
+            const previewQuad = PREVIEW_SIZE;
+            const targetSize = previewQuad * IMG_RATIO;
+            let drawWidth, drawHeight;
+            if (img.width > img.height) {
+              drawWidth = targetSize;
+              drawHeight = (img.height / img.width) * targetSize;
+            } else {
+              drawHeight = targetSize;
+              drawWidth = (img.width / img.height) * targetSize;
+            }
+            ctxPreview.clearRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
+            ctxPreview.fillStyle = '#fff';
+            ctxPreview.fillRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
+            ctxPreview.drawImage(img, (PREVIEW_SIZE-drawWidth)/2, (PREVIEW_SIZE-drawHeight)/2, drawWidth, drawHeight);
+            previewArea.classList.remove('hidden');
+            finalImageReady = true;
+          };
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      downloadBtn.addEventListener('click', function () {
+        if (!finalImageReady || !imgOriginal) return;
+        const maxSide = Math.max(imgOriginal.width, imgOriginal.height);
+        const quadSize = Math.round(maxSide / IMG_RATIO);
+        const canvas = document.createElement('canvas');
+        canvas.width = quadSize;
+        canvas.height = quadSize;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, quadSize, quadSize);
+        let drawWidth, drawHeight;
+        if (imgOriginal.width > imgOriginal.height) {
+          drawWidth = quadSize * IMG_RATIO;
+          drawHeight = (imgOriginal.height / imgOriginal.width) * drawWidth;
+        } else {
+          drawHeight = quadSize * IMG_RATIO;
+          drawWidth = (imgOriginal.width / imgOriginal.height) * drawHeight;
+        }
+        const x = (quadSize - drawWidth) / 2;
+        const y = (quadSize - drawHeight) / 2;
+        ctx.drawImage(imgOriginal, x, y, drawWidth, drawHeight);
+        if (exifText) {
+          ctx.font = Math.round(quadSize * 0.03) + 'px sans-serif';
+          ctx.fillStyle = '#444';
+          ctx.textAlign = 'center';
+          ctx.fillText(exifText, quadSize / 2, quadSize - quadSize * 0.03);
+        }
+        const link = document.createElement('a');
+        link.download = 'foto-moldurada-1x1.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    </script>
+  </body>
+</html>

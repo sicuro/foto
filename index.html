@@ -20,6 +20,16 @@
   <body class="bg-neutral-100 min-h-screen flex flex-col items-center justify-center p-0">
     <main class="w-full max-w-md bg-white rounded-none shadow-none p-0 flex flex-col gap-4 min-h-screen">
       <form id="uploadForm" class="flex flex-col gap-2 px-4 pt-8 pb-2">
+        <div class="flex flex-row gap-2 mb-2">
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <input type="radio" name="outputRatio" value="1:1" checked class="accent-indigo-600" />
+            Quadrado 1:1
+          </label>
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <input type="radio" name="outputRatio" value="9:16" class="accent-indigo-600" />
+            Stories 9:16
+          </label>
+        </div>
         <label class="block">
           <input id="fileInput" type="file" accept="image/*" multiple class="mt-2 block w-full text-base text-gray-700 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-base file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
         </label>
@@ -59,20 +69,59 @@
       let finalImageReady = false;
       let exifText = '';
 
-      function getExifText(exif) {
-        const make = exif.Make || '';
-        const model = exif.Model || '';
-        const lens = exif.LensModel || exif['UndefinedTag:0xA434'] || '';
-        const iso = exif.ISOSpeedRatings ? 'ISO ' + exif.ISOSpeedRatings : '';
-        const exposure = exif.ExposureTime ? exif.ExposureTime + 's' : '';
-        const fNumber = exif.FNumber ? 'f/' + exif.FNumber : '';
-        let parts = [];
-        if (make || model) parts.push((make + ' ' + model).trim());
-        if (lens) parts.push(lens);
-        if (iso) parts.push(iso);
-        if (fNumber) parts.push(fNumber);
-        if (exposure) parts.push(exposure);
+      // Função para montar texto das infos EXIF com tracinhos estilo Flickr
+      function getExifText(tags) {
+        const parts = [];
+        // Marca + modelo
+        if (tags.Make || tags.Model) parts.push((tags.Make||'') + ' ' + (tags.Model||''));
+        // Distância focal
+        if (tags.FocalLength) parts.push(tags.FocalLength + 'mm');
+        // f/Número
+        if (tags.FNumber) parts.push('f/' + tags.FNumber);
+        // Tempo de exposição
+        if (tags.ExposureTime) {
+          let exp = tags.ExposureTime;
+          // Se for string tipo '1/250', mantém
+          if (typeof exp === 'string' && exp.indexOf('/') > -1) {
+            exp = exp + 's';
+          } else if (typeof exp === 'number') {
+            if (exp < 1 && exp > 0) {
+              // Converter decimal para fração (ex: 0.0125 => 1/80s)
+              const denom = Math.round(1/exp);
+              exp = `1/${denom}s`;
+            } else {
+              exp = exp.toFixed(1) + 's';
+            }
+          }
+          parts.push(exp);
+        }
+        // ISO
+        if (tags.ISOSpeedRatings) parts.push('ISO ' + tags.ISOSpeedRatings);
         return parts.join(' — ');
+      }
+
+      // Função para montar HTML das infos EXIF com ícones estilo Flickr
+      function getExifHtml(tags) {
+        const parts = [];
+        // Marca + modelo
+        if (tags.Make || tags.Model) parts.push('<span class="exif-icon">📷</span> ' + (tags.Make||'') + ' ' + (tags.Model||''));
+        // Distância focal
+        if (tags.FocalLength) parts.push('<span class="exif-icon">🔭</span> ' + tags.FocalLength + 'mm');
+        // f/Número
+        if (tags.FNumber) parts.push('<span class="exif-icon">🌙</span> f/' + tags.FNumber);
+        // Tempo de exposição
+        if (tags.ExposureTime) {
+          let exp = tags.ExposureTime;
+          if (typeof exp === 'number') {
+            exp = exp >= 1 ? exp.toFixed(1) + 's' : ('1/' + Math.round(1/exp) + 's');
+          } else if (typeof exp === 'string' && exp.indexOf('/') > -1) {
+            exp = exp + 's';
+          }
+          parts.push('<span class="exif-icon">⏱️</span> ' + exp);
+        }
+        // ISO
+        if (tags.ISOSpeedRatings) parts.push('<span class="exif-icon">🌀</span> ISO ' + tags.ISOSpeedRatings);
+        return parts.join(' &nbsp;&nbsp;&nbsp; '); // Espaço extra entre infos
       }
 
       // NOVO: Multi-foto e thumbs
@@ -211,39 +260,74 @@
 
       // Função para gerar imagem final para o ZIP
       function generateCanvasUrl(img, infoToggle, exifForThis, idx) {
-        const maxSide = Math.max(img.width, img.height);
-        const quadSize = Math.round(maxSide / IMG_RATIO);
+        // Descobre o formato escolhido
+        let ratio = 1;
+        let canvasW, canvasH;
+        const selected = document.querySelector('input[name="outputRatio"]:checked');
+        if (selected && selected.value === '9:16') {
+          ratio = 9/16;
+          canvasH = 1600;
+          canvasW = Math.round(canvasH * ratio);
+        } else {
+          canvasW = canvasH = 1200;
+        }
+        // Foto ocupa no máximo 90% do lado menor (moldura de 5% cada lado)
+        const maxFoto = Math.min(canvasW, canvasH) * 0.9;
+        let drawW = img.width, drawH = img.height;
+        const scale = Math.min(maxFoto / img.width, maxFoto / img.height);
+        drawW = img.width * scale;
+        drawH = img.height * scale;
+        const x = (canvasW - drawW) / 2;
+        const y = (canvasH - drawH) / 2;
         const canvas = document.createElement('canvas');
-        canvas.width = quadSize;
-        canvas.height = quadSize;
+        canvas.width = canvasW;
+        canvas.height = canvasH;
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, quadSize, quadSize);
-        let drawWidth, drawHeight;
-        if (img.width > img.height) {
-          drawWidth = quadSize * IMG_RATIO;
-          drawHeight = (img.height / img.width) * drawWidth;
-        } else {
-          drawHeight = quadSize * IMG_RATIO;
-          drawWidth = (img.width / img.height) * drawHeight;
-        }
-        const x = (quadSize - drawWidth) / 2;
-        const y = (quadSize - drawHeight) / 2;
-        ctx.drawImage(img, x, y, drawWidth, drawHeight);
+        ctx.fillRect(0, 0, canvasW, canvasH);
+        ctx.drawImage(img, x, y, drawW, drawH);
+        // Infos
         if (infoToggle && infoToggle.checked && exifForThis) {
           ctx.save();
-          ctx.font = Math.round(quadSize * 0.03) + 'px sans-serif';
+          // Ajuste automático do tamanho da fonte para caber as infos
+          let maxFont = Math.round(canvasH * 0.03);
+          let fontSize = maxFont;
+          ctx.font = fontSize + 'px sans-serif';
           ctx.fillStyle = '#444';
           ctx.textAlign = 'center';
-          // Se for formato vertical (mais alto que largo), escreve na lateral esquerda, centralizado
+          // Medidas para ajuste
+          let fits = false;
           if (img.height > img.width * 1.25) {
-            ctx.translate(quadSize * 0.04, quadSize / 2); // margem esquerda, centro vertical
+            // Lateral esquerda, vertical
+            ctx.save();
+            ctx.translate(canvasW * 0.04, canvasH / 2);
             ctx.rotate(-Math.PI / 2);
             ctx.textAlign = 'center';
+            // Reduz fonte até caber 90% da altura útil
+            while (fontSize > 10) {
+              ctx.font = fontSize + 'px sans-serif';
+              if (ctx.measureText(exifForThis).width < canvasH * 0.9) { fits = true; break; }
+              fontSize -= 1;
+            }
+            ctx.font = fontSize + 'px sans-serif';
             ctx.fillText(exifForThis, 0, 0);
+            ctx.restore();
           } else {
             // Embaixo, centralizado
-            ctx.fillText(exifForThis, quadSize / 2, quadSize - quadSize * 0.03);
+            // Se for stories (canvas 9:16), sobe as infos para não ficar colado na base
+            let yInfo = canvasH - canvasH * 0.15;
+            if (canvasW === canvasH) {
+              // 1:1, mantém na base
+              yInfo = canvasH - canvasH * 0.03;
+            }
+            // Reduz fonte até caber 90% da largura útil
+            while (fontSize > 10) {
+              ctx.font = fontSize + 'px sans-serif';
+              if (ctx.measureText(exifForThis).width < canvasW * 0.9) { fits = true; break; }
+              fontSize -= 1;
+            }
+            ctx.font = fontSize + 'px sans-serif';
+            ctx.fillText(exifForThis, canvasW / 2, yInfo);
           }
           ctx.restore();
         }

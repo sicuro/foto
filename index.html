@@ -18,18 +18,15 @@
     <link rel="apple-touch-icon" href="icon-192.png">
   </head>
   <body class="bg-neutral-100 min-h-screen flex flex-col items-center justify-center p-0">
+    <!-- Ícone de configurações fixo no topo direito -->
+    <button id="settingsBtn" type="button" aria-label="Configurações" class="fixed top-4 right-4 z-30 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 focus:outline-none">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7 text-gray-600">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.149c-.542-.09-.94-.56-.94-1.11v-1.094c0-.55.398-1.019.94-1.11l.894-.149c.424-.071.765-.384.93-.78.165-.398.142-.854-.108-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.774-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.806.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </button>
     <main class="w-full max-w-md bg-white rounded-none shadow-none p-0 flex flex-col gap-4 min-h-screen">
       <form id="uploadForm" class="flex flex-col gap-2 px-4 pt-8 pb-2">
-        <div class="flex flex-row gap-2 mb-2">
-          <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <input type="radio" name="outputRatio" value="1:1" checked class="accent-indigo-600" />
-            Quadrado 1:1
-          </label>
-          <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <input type="radio" name="outputRatio" value="9:16" class="accent-indigo-600" />
-            Stories 9:16
-          </label>
-        </div>
         <label class="block">
           <input id="fileInput" type="file" accept="image/*" multiple class="mt-2 block w-full text-base text-gray-700 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-base file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
         </label>
@@ -43,6 +40,27 @@
         <button id="downloadBtn" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">Baixar Foto com Moldura</button>
       </div>
     </main>
+    <!-- Painel de configurações oculto por padrão -->
+    <div id="settingsPanel" class="hidden fixed top-0 left-0 w-full h-full z-20 flex items-start justify-center bg-black bg-opacity-30">
+      <div class="bg-white border border-gray-200 rounded-xl px-6 py-5 mt-16 shadow-xl flex flex-col gap-3 w-full max-w-xs relative animate-fadeIn">
+        <button id="closeSettings" type="button" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600" aria-label="Fechar"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+        <span class="text-xs font-semibold text-gray-500 tracking-wide mb-1">Configurações</span>
+        <div class="flex flex-row gap-4 items-center">
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <input type="radio" name="outputRatio" value="1:1" checked class="accent-indigo-600" />
+            Quadrado 1:1
+          </label>
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <input type="radio" name="outputRatio" value="9:16" class="accent-indigo-600" />
+            Stories 9:16
+          </label>
+        </div>
+        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mt-1">
+          <input type="checkbox" id="leicaBW" class="accent-indigo-600" />
+          Preto e branco estilo Leica
+        </label>
+      </div>
+    </div>
     <!-- Overlay para visualização em tela cheia -->
     <div id="imageOverlay" class="fixed inset-0 bg-black bg-opacity-90 flex-col items-center justify-center z-50 hidden">
       <img id="overlayImg" src="" alt="Imagem em tela cheia" class="max-w-full max-h-[80vh] rounded-xl shadow-lg mx-auto mt-20" />
@@ -286,24 +304,39 @@
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, canvasW, canvasH);
         ctx.drawImage(img, x, y, drawW, drawH);
+        // Filtro preto e branco estilo Leica
+        const leicaBW = document.getElementById('leicaBW')?.checked;
+        if (leicaBW) {
+          // Pega só a área da foto
+          const imgData = ctx.getImageData(x, y, drawW, drawH);
+          const d = imgData.data;
+          for (let i = 0; i < d.length; i += 4) {
+            // Conversão P&B customizada (Leica: contraste forte, pretos profundos, leve fade nos highlights)
+            let gray = 0.33 * d[i] + 0.59 * d[i+1] + 0.08 * d[i+2];
+            // Contraste
+            gray = (gray - 128) * 1.25 + 128;
+            // Fade nos highlights
+            if (gray > 220) gray = 220 + (gray-220)*0.6;
+            // Clamp
+            gray = Math.max(0, Math.min(255, gray));
+            d[i] = d[i+1] = d[i+2] = gray;
+          }
+          ctx.putImageData(imgData, x, y);
+        }
         // Infos
         if (infoToggle && infoToggle.checked && exifForThis) {
           ctx.save();
-          // Ajuste automático do tamanho da fonte para caber as infos
           let maxFont = Math.round(canvasH * 0.03);
           let fontSize = maxFont;
           ctx.font = fontSize + 'px sans-serif';
           ctx.fillStyle = '#444';
           ctx.textAlign = 'center';
-          // Medidas para ajuste
           let fits = false;
           if (img.height > img.width * 1.25) {
-            // Lateral esquerda, vertical
             ctx.save();
             ctx.translate(canvasW * 0.04, canvasH / 2);
             ctx.rotate(-Math.PI / 2);
             ctx.textAlign = 'center';
-            // Reduz fonte até caber 90% da altura útil
             while (fontSize > 10) {
               ctx.font = fontSize + 'px sans-serif';
               if (ctx.measureText(exifForThis).width < canvasH * 0.9) { fits = true; break; }
@@ -313,14 +346,10 @@
             ctx.fillText(exifForThis, 0, 0);
             ctx.restore();
           } else {
-            // Embaixo, centralizado
-            // Se for stories (canvas 9:16), sobe as infos para não ficar colado na base
             let yInfo = canvasH - canvasH * 0.15;
             if (canvasW === canvasH) {
-              // 1:1, mantém na base
               yInfo = canvasH - canvasH * 0.03;
             }
-            // Reduz fonte até caber 90% da largura útil
             while (fontSize > 10) {
               ctx.font = fontSize + 'px sans-serif';
               if (ctx.measureText(exifForThis).width < canvasW * 0.9) { fits = true; break; }
@@ -444,6 +473,27 @@
           URL.revokeObjectURL(url);
         }, 100);
       });
+
+      // Abrir e fechar painel de configurações
+      const settingsBtn = document.getElementById('settingsBtn');
+      const settingsPanel = document.getElementById('settingsPanel');
+      const closeSettings = document.getElementById('closeSettings');
+      if (settingsBtn && settingsPanel) {
+        settingsBtn.addEventListener('click', () => {
+          settingsPanel.classList.remove('hidden');
+        });
+      }
+      if (closeSettings && settingsPanel) {
+        closeSettings.addEventListener('click', () => {
+          settingsPanel.classList.add('hidden');
+        });
+      }
+      // Fecha ao clicar fora do painel
+      if (settingsPanel) {
+        settingsPanel.addEventListener('click', (e) => {
+          if (e.target === settingsPanel) settingsPanel.classList.add('hidden');
+        });
+      }
     </script>
   </body>
 </html>

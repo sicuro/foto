@@ -191,11 +191,11 @@
                   ctx.font = Math.round(quadSize * 0.03) + 'px sans-serif';
                   ctx.fillStyle = '#444';
                   ctx.textAlign = 'center';
-                  // Se for formato vertical (mais alto que largo), escreve na lateral esquerda, na vertical
+                  // Se for formato vertical (mais alto que largo), escreve na lateral esquerda, centralizado
                   if (img.height > img.width * 1.25) {
-                    ctx.translate(quadSize * 0.05, quadSize / 2);
+                    ctx.translate(quadSize * 0.04, quadSize / 2); // margem esquerda, centro vertical
                     ctx.rotate(-Math.PI / 2);
-                    ctx.textAlign = 'left';
+                    ctx.textAlign = 'center';
                     ctx.fillText(exifForThis, 0, 0);
                   } else {
                     // Embaixo, centralizado
@@ -255,11 +255,11 @@
           ctx.font = Math.round(quadSize * 0.03) + 'px sans-serif';
           ctx.fillStyle = '#444';
           ctx.textAlign = 'center';
-          // Se for formato vertical (mais alto que largo), escreve na lateral esquerda, na vertical
+          // Se for formato vertical (mais alto que largo), escreve na lateral esquerda, centralizado
           if (img.height > img.width * 1.25) {
-            ctx.translate(quadSize * 0.05, quadSize / 2);
+            ctx.translate(quadSize * 0.04, quadSize / 2); // margem esquerda, centro vertical
             ctx.rotate(-Math.PI / 2);
-            ctx.textAlign = 'left';
+            ctx.textAlign = 'center';
             ctx.fillText(exifForThis, 0, 0);
           } else {
             // Embaixo, centralizado

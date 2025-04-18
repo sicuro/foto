@@ -173,10 +173,16 @@
                   ctx.textAlign = 'center';
                   ctx.fillText(exifForThis, quadSize / 2, quadSize - quadSize * 0.03);
                 }
+                const url = canvas.toDataURL('image/png');
                 const link = document.createElement('a');
                 link.download = `foto-moldurada-1x1-${idx+1}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                link.href = url;
+                // Compatibilidade: tenta baixar, senão abre em nova aba
+                if (typeof link.download !== 'undefined') {
+                  link.click();
+                } else {
+                  window.open(url, '_blank');
+                }
               });
 
               thumbsGrid.appendChild(thumbDiv);

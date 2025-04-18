@@ -98,10 +98,8 @@
               thumbCanvas.width = 160;
               thumbCanvas.height = 160;
               const thumbCtx = thumbCanvas.getContext('2d');
-              // Fundo branco
               thumbCtx.fillStyle = '#fff';
               thumbCtx.fillRect(0, 0, 160, 160);
-              // Calcula tamanho da imagem mantendo proporção
               let tw, th;
               if (img.width > img.height) {
                 tw = 144;
@@ -113,8 +111,16 @@
               thumbCtx.drawImage(img, (160-tw)/2, (160-th)/2, tw, th);
               // Container da thumb
               const thumbDiv = document.createElement('div');
-              thumbDiv.className = 'flex flex-col items-center bg-gray-50 rounded-xl shadow p-2 cursor-pointer hover:ring-4 hover:ring-blue-400 transition';
+              thumbDiv.className = 'flex flex-col items-center bg-gray-50 rounded-xl shadow p-2 cursor-pointer hover:ring-4 hover:ring-blue-400 transition relative';
               thumbDiv.appendChild(thumbCanvas);
+
+              // Botão remover (X)
+              const removeBtn = document.createElement('button');
+              removeBtn.type = 'button';
+              removeBtn.title = 'Remover foto';
+              removeBtn.innerHTML = '&times;';
+              removeBtn.className = 'absolute top-1 right-2 text-xl text-gray-400 hover:text-red-500 font-bold bg-white bg-opacity-80 rounded-full w-7 h-7 flex items-center justify-center shadow-sm z-10';
+              thumbDiv.appendChild(removeBtn);
 
               // Checkbox para mostrar infos
               const infoToggle = document.createElement('input');
@@ -168,53 +174,15 @@
                 }
               });
 
-              function generateCanvasUrl() {
-                const maxSide = Math.max(img.width, img.height);
-                const quadSize = Math.round(maxSide / IMG_RATIO);
-                const canvas = document.createElement('canvas');
-                canvas.width = quadSize;
-                canvas.height = quadSize;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(0, 0, quadSize, quadSize);
-                let drawWidth, drawHeight;
-                if (img.width > img.height) {
-                  drawWidth = quadSize * IMG_RATIO;
-                  drawHeight = (img.height / img.width) * drawWidth;
-                } else {
-                  drawHeight = quadSize * IMG_RATIO;
-                  drawWidth = (img.width / img.height) * drawHeight;
-                }
-                ctx.drawImage(img, (quadSize - drawWidth) / 2, (quadSize - drawHeight) / 2, drawWidth, drawHeight);
-                if (infoToggle.checked && exifForThis) {
-                  ctx.save();
-                  ctx.font = Math.round(quadSize * 0.03) + 'px sans-serif';
-                  ctx.fillStyle = '#444';
-                  ctx.textAlign = 'center';
-                  // Se for formato vertical (mais alto que largo), escreve na lateral esquerda, centralizado
-                  if (img.height > img.width * 1.25) {
-                    ctx.translate(quadSize * 0.04, quadSize / 2); // margem esquerda, centro vertical
-                    ctx.rotate(-Math.PI / 2);
-                    ctx.textAlign = 'center';
-                    ctx.fillText(exifForThis, 0, 0);
-                  } else {
-                    // Embaixo, centralizado
-                    ctx.fillText(exifForThis, quadSize / 2, quadSize - quadSize * 0.03);
-                  }
-                  ctx.restore();
-                }
-                return canvas.toDataURL('image/png');
-              }
-
-              downloadThumbBtn.addEventListener('click', function() {
-                const url = generateCanvasUrl();
-                const link = document.createElement('a');
-                link.download = `foto-moldurada-1x1-${idx+1}.png`;
-                link.href = url;
-                if (typeof link.download !== 'undefined') {
-                  link.click();
-                } else {
-                  window.open(url, '_blank');
+              // Remover thumb e atualizar lista
+              removeBtn.addEventListener('click', function(ev) {
+                ev.stopPropagation();
+                thumbDiv.remove();
+                window._zipImages[idx] = null;
+                // Se não houver mais thumbs, esconde grid e botão ZIP
+                if (!Array.from(thumbsGrid.children).some(child => child.style.display !== 'none')) {
+                  thumbsGrid.classList.add('hidden');
+                  document.getElementById('downloadZipBtn').classList.add('hidden');
                 }
               });
 

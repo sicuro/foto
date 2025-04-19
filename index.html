@@ -21,7 +21,7 @@
     <!-- Ícone de configurações fixo no topo direito -->
     <button id="settingsBtn" type="button" aria-label="Configurações" class="fixed top-4 right-4 z-30 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 focus:outline-none">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7 text-gray-600">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.149c-.542-.09-.94-.56-.94-1.11v-1.094c0-.55.398-1.019.94-1.11l.894-.149c.424-.071.765-.384.93-.78.165-.398.142-.854-.108-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.774-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.806.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.149c-.542-.09-.94-.56-.94-1.11v-1.094c0-.55.398-1.019.94-1.11l.894-.149c.424-.071.765-.384.93-.78.165-.398.142-.854-.108-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.774-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.806.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     </button>
@@ -58,6 +58,10 @@
         <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mt-1">
           <input type="checkbox" id="leicaBW" class="accent-indigo-600" />
           Preto e branco estilo Leica
+        </label>
+        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mt-1">
+          <input type="checkbox" id="daidoMoriyama" class="accent-indigo-600" />
+          Daido Moriyama
         </label>
       </div>
     </div>
@@ -138,6 +142,7 @@
         document.getElementById('downloadZipBtn').classList.remove('hidden');
         // Armazenar infos de cada imagem
         window._zipImages = [];
+        window._thumbSources = [];
         files.forEach((file, idx) => {
           const reader = new FileReader();
           reader.onload = function (evt) {
@@ -159,6 +164,12 @@
                 tw = (img.width / img.height) * 144;
               }
               thumbCtx.drawImage(img, (160-tw)/2, (160-th)/2, tw, th);
+              // Salva o src da imagem original para reprocessar depois
+              window._thumbSources[idx] = evt.target.result;
+              // Aplica filtro Daido Moriyama, se selecionado
+              const daidoCheckbox = document.getElementById('daidoMoriyama');
+              const leicaCheckbox = document.getElementById('leicaBW');
+              renderThumb(img, thumbCanvas, leicaCheckbox && leicaCheckbox.checked, daidoCheckbox && daidoCheckbox.checked);
               // Container da thumb
               const thumbDiv = document.createElement('div');
               thumbDiv.className = 'flex flex-col items-center bg-gray-50 rounded-xl shadow p-2 cursor-pointer hover:ring-4 hover:ring-blue-400 transition relative';
@@ -171,6 +182,26 @@
               removeBtn.innerHTML = '&times;';
               removeBtn.className = 'absolute top-1 right-2 text-xl text-gray-400 hover:text-red-500 font-bold bg-white bg-opacity-80 rounded-full w-7 h-7 flex items-center justify-center shadow-sm z-10';
               thumbDiv.appendChild(removeBtn);
+
+              // Botão de refresh do Daido Moriyama
+              const refreshBtn = document.createElement('button');
+              refreshBtn.type = 'button';
+              refreshBtn.title = 'Novo Daido Moriyama';
+              refreshBtn.innerHTML = '🔄';
+              refreshBtn.className = 'absolute top-1 left-2 text-lg text-gray-400 hover:text-blue-600 font-bold bg-white bg-opacity-80 rounded-full w-7 h-7 flex items-center justify-center shadow-sm z-10';
+              refreshBtn.style.display = (daidoCheckbox && daidoCheckbox.checked) ? '' : 'none';
+              thumbDiv.appendChild(refreshBtn);
+
+              // Atualiza visibilidade do botão de refresh ao mudar o filtro Daido Moriyama
+              daidoCheckbox && daidoCheckbox.addEventListener('change', function() {
+                refreshBtn.style.display = this.checked ? '' : 'none';
+              });
+
+              // Ao clicar no refresh, redesenha só a thumb com novo Daido Moriyama
+              refreshBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                renderThumb(img, thumbCanvas, leicaCheckbox && leicaCheckbox.checked, daidoCheckbox && daidoCheckbox.checked);
+              });
 
               // Checkbox para mostrar infos
               const infoToggle = document.createElement('input');
@@ -211,29 +242,85 @@
                 }
               });
 
-              // Clique na thumb abre overlay de visualização
-              thumbDiv.addEventListener('click', function(e) {
-                // Evita conflito ao clicar nos botões/checkbox dentro da thumb
-                if (e.target === thumbDiv || e.target === thumbCanvas) {
-                  const url = generateCanvasUrl(img, infoToggle, exifForThis, idx);
-                  const overlay = document.getElementById('imageOverlay');
-                  const overlayImg = document.getElementById('overlayImg');
-                  overlayImg.src = url;
+              // Salva canvas para overlay (Daido Moriyama e normal)
+              function getDaidoMoriyamaDataUrl() {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = 400;
+                tempCanvas.height = 400;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.fillStyle = '#fff';
+                tempCtx.fillRect(0, 0, 400, 400);
+                let tw, th;
+                if (img.width > img.height) {
+                  tw = 360;
+                  th = (img.height / img.width) * 360;
+                } else {
+                  th = 360;
+                  tw = (img.width / img.height) * 360;
+                }
+                tempCtx.drawImage(img, (400-tw)/2, (400-th)/2, tw, th);
+                applyDaidoMoriyamaFilter(tempCtx, (400-tw)/2, (400-th)/2, tw, th);
+                return tempCanvas.toDataURL('image/png');
+              }
+              function getOriginalDataUrl() {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = 400;
+                tempCanvas.height = 400;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.fillStyle = '#fff';
+                tempCtx.fillRect(0, 0, 400, 400);
+                let tw, th;
+                if (img.width > img.height) {
+                  tw = 360;
+                  th = (img.height / img.width) * 360;
+                } else {
+                  th = 360;
+                  tw = (img.width / img.height) * 360;
+                }
+                tempCtx.drawImage(img, (400-tw)/2, (400-th)/2, tw, th);
+                return tempCanvas.toDataURL('image/png');
+              }
+              // Ao clicar na thumb, mostra overlay com Daido Moriyama ou não
+              thumbCanvas.addEventListener('click', function() {
+                const leicaAtivo = document.getElementById('leicaBW')?.checked;
+                const daidoAtivo = document.getElementById('daidoMoriyama')?.checked;
+                const overlay = document.getElementById('imageOverlay');
+                const overlayImg = document.getElementById('overlayImg');
+                const tempCanvas = document.createElement('canvas');
+                EXIF.getData(file, function () {
+                  const allExif = EXIF.getAllTags(this);
+                  const exifForThis = getExifText(allExif);
+                  renderOverlay(img, tempCanvas, leicaAtivo, daidoAtivo, exifForThis);
+                  overlayImg.src = tempCanvas.toDataURL('image/png');
                   overlay.classList.remove('hidden');
                   overlay.classList.add('flex');
-                }
+                });
               });
 
               // Download individual corrigido
               downloadThumbBtn.addEventListener('click', function(ev) {
                 ev.stopPropagation();
-                const url = generateCanvasUrl(img, infoToggle, exifForThis, idx);
-                const link = document.createElement('a');
-                link.download = `foto-moldurada-1x1-${idx+1}.png`;
-                link.href = url;
-                document.body.appendChild(link);
-                link.click();
-                setTimeout(() => document.body.removeChild(link), 100);
+                if (infoToggle.checked) {
+                  EXIF.getData(file, function () {
+                    const allExif = EXIF.getAllTags(this);
+                    const exifForThis = getExifText(allExif);
+                    const url = generateCanvasUrl(img, infoToggle, exifForThis, idx);
+                    const link = document.createElement('a');
+                    link.download = `foto-moldurada-1x1-${idx+1}.png`;
+                    link.href = url;
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => document.body.removeChild(link), 100);
+                  });
+                } else {
+                  const url = generateCanvasUrl(img, infoToggle, '', idx);
+                  const link = document.createElement('a');
+                  link.download = `foto-moldurada-1x1-${idx+1}.png`;
+                  link.href = url;
+                  document.body.appendChild(link);
+                  link.click();
+                  setTimeout(() => document.body.removeChild(link), 100);
+                }
               });
 
               // Remover thumb e atualizar lista
@@ -249,8 +336,19 @@
               });
 
               // Salvar função para gerar imagem final (com infos) para o ZIP
-              window._zipImages[idx] = () => generateCanvasUrl(img, infoToggle, exifForThis, idx);
-
+              window._zipImages[idx] = () => {
+                return new Promise((resolve) => {
+                  if (infoToggle.checked) {
+                    EXIF.getData(file, function () {
+                      const allExif = EXIF.getAllTags(this);
+                      const exifForThis = getExifText(allExif);
+                      resolve(generateCanvasUrl(img, infoToggle, exifForThis, idx));
+                    });
+                  } else {
+                    resolve(generateCanvasUrl(img, infoToggle, '', idx));
+                  }
+                });
+              };
               thumbsGrid.appendChild(thumbDiv);
             };
             img.src = evt.target.result;
@@ -290,21 +388,12 @@
         // Filtro preto e branco estilo Leica
         const leicaBW = document.getElementById('leicaBW')?.checked;
         if (leicaBW) {
-          // Pega só a área da foto
-          const imgData = ctx.getImageData(x, y, drawW, drawH);
-          const d = imgData.data;
-          for (let i = 0; i < d.length; i += 4) {
-            // Conversão P&B customizada (Leica: contraste forte, pretos profundos, leve fade nos highlights)
-            let gray = 0.33 * d[i] + 0.59 * d[i+1] + 0.08 * d[i+2];
-            // Contraste
-            gray = (gray - 128) * 1.25 + 128;
-            // Fade nos highlights
-            if (gray > 220) gray = 220 + (gray-220)*0.6;
-            // Clamp
-            gray = Math.max(0, Math.min(255, gray));
-            d[i] = d[i+1] = d[i+2] = gray;
-          }
-          ctx.putImageData(imgData, x, y);
+          applyLeicaFilter(ctx, x, y, drawW, drawH);
+        }
+        // Filtro Daido Moriyama
+        const daidoMoriyama = document.getElementById('daidoMoriyama')?.checked;
+        if (daidoMoriyama) {
+          applyDaidoMoriyamaFilter(ctx, x, y, drawW, drawH);
         }
         // Infos
         if (infoToggle && infoToggle.checked && exifForThis) {
@@ -344,6 +433,176 @@
           ctx.restore();
         }
         return canvas.toDataURL('image/png');
+      }
+
+      // Filtro Daido Moriyama ultra fiel às referências
+      function applyDaidoMoriyamaFilter(ctx, x, y, w, h) {
+        // 1. PB extremo + granulação procedural (grãos grandes e pequenos)
+        const imgData = ctx.getImageData(x, y, w, h);
+        let data = imgData.data;
+        for (let j = 0; j < h; j++) {
+          for (let i = 0; i < w; i++) {
+            let idx = (j*w + i)*4;
+            let avg = 0.299*data[idx] + 0.587*data[idx+1] + 0.114*data[idx+2];
+            // Granulação procedural: mistura ruído pixel a pixel e "grãos" maiores
+            let grain = (Math.random()-0.5)*110 + (Math.random()-0.5)*80*Math.sin(i/8+j/11);
+            avg += grain;
+            // Threshold PB extremo
+            let val = avg > 90 ? 255 : 0;
+            // Manchas brancas e pretas
+            if (Math.random()<0.006 && val===255) val = 255;
+            if (Math.random()<0.006 && val===0) val = 0;
+            data[idx] = data[idx+1] = data[idx+2] = val;
+          }
+        }
+        ctx.putImageData(imgData, x, y);
+        // 2. Distorção orgânica (marbling/ondas)
+        const distortData = ctx.getImageData(x, y, w, h);
+        let d = distortData.data;
+        let temp = new Uint8ClampedArray(d.length);
+        for (let j = 0; j < h; j++) {
+          // Ondas orgânicas (seno/cosseno + ruído)
+          let offset = Math.floor(Math.sin(j/16)*10 + Math.cos(j/6)*6 + (Math.random()-0.5)*6);
+          for (let i = 0; i < w; i++) {
+            let srcI = i+offset;
+            if (srcI<0 || srcI>=w) continue;
+            let idx = (j*w + i)*4;
+            let srcIdx = (j*w + srcI)*4;
+            temp[idx] = d[srcIdx];
+            temp[idx+1] = d[srcIdx+1];
+            temp[idx+2] = d[srcIdx+2];
+            temp[idx+3] = d[srcIdx+3];
+          }
+        }
+        for (let i = 0; i < temp.length; i++) d[i] = temp[i];
+        ctx.putImageData(distortData, x, y);
+        // 3. Blur direcional (arrasto/motion blur)
+        const blurData = ctx.getImageData(x, y, w, h);
+        let bd = blurData.data;
+        // Simula arrasto horizontal
+        for (let j = 0; j < h; j++) {
+          for (let i = 1; i < w; i++) {
+            let idx = (j*w + i)*4;
+            let prevIdx = (j*w + i-1)*4;
+            bd[idx] = (bd[idx]*0.6 + bd[prevIdx]*0.4);
+            bd[idx+1] = (bd[idx+1]*0.6 + bd[prevIdx+1]*0.4);
+            bd[idx+2] = (bd[idx+2]*0.6 + bd[prevIdx+2]*0.4);
+          }
+        }
+        ctx.putImageData(blurData, x, y);
+        // 4. Vinheta pesada
+        let vignette = ctx.getImageData(x, y, w, h);
+        let vd = vignette.data;
+        let cx = w/2, cy = h/2, maxR = Math.sqrt(cx*cx+cy*cy);
+        for (let j = 0; j < h; j++) {
+          for (let i = 0; i < w; i++) {
+            let idx = (j*w + i)*4;
+            let dx = i-cx, dy = j-cy;
+            let dist = Math.sqrt(dx*dx+dy*dy)/maxR;
+            let darken = 1-Math.pow(1-dist,2)*0.8;
+            vd[idx] = vd[idx+1] = vd[idx+2] = vd[idx]*darken;
+          }
+        }
+        ctx.putImageData(vignette, x, y);
+      }
+
+      // Filtro preto e branco estilo Leica
+      function applyLeicaFilter(ctx, x, y, w, h) {
+        // 1. PB clássico com contraste suave
+        const imgData = ctx.getImageData(x, y, w, h);
+        let data = imgData.data;
+        for (let j = 0; j < h; j++) {
+          for (let i = 0; i < w; i++) {
+            let idx = (j*w + i)*4;
+            // Conversão para PB (luminosidade)
+            let lum = 0.299*data[idx] + 0.587*data[idx+1] + 0.114*data[idx+2];
+            // Suave curva S para contraste Leica
+            lum = lum/255;
+            lum = 0.85 * (lum < 0.5 ? 2*lum*lum : 1 - 2*(1-lum)*(1-lum)) + 0.15*lum; // curva S leve
+            lum = Math.max(0, Math.min(1, lum));
+            lum = 255*lum;
+            data[idx] = data[idx+1] = data[idx+2] = lum;
+          }
+        }
+        ctx.putImageData(imgData, x, y);
+        // 2. Vinheta leve
+        let vignette = ctx.getImageData(x, y, w, h);
+        let vd = vignette.data;
+        let cx = w/2, cy = h/2, maxR = Math.sqrt(cx*cx+cy*cy);
+        for (let j = 0; j < h; j++) {
+          for (let i = 0; i < w; i++) {
+            let idx = (j*w + i)*4;
+            let dx = i-cx, dy = j-cy;
+            let dist = Math.sqrt(dx*dx+dy*dy)/maxR;
+            let darken = 1-Math.pow(1-dist,2)*0.3; // vinheta leve
+            vd[idx] = vd[idx+1] = vd[idx+2] = vd[idx]*darken;
+          }
+        }
+        ctx.putImageData(vignette, x, y);
+      }
+
+      // Redesenha a thumb conforme filtros
+      function renderThumb(img, canvas, leica, daido) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        let tw, th;
+        if (img.width > img.height) {
+          tw = 144;
+          th = (img.height / img.width) * 144;
+        } else {
+          th = 144;
+          tw = (img.width / img.height) * 144;
+        }
+        const px = (160-tw)/2, py = (160-th)/2;
+        ctx.drawImage(img, px, py, tw, th);
+        if (leica) applyLeicaFilter(ctx, px, py, tw, th);
+        if (daido) applyDaidoMoriyamaFilter(ctx, px, py, tw, th);
+      }
+
+      // Redesenha overlay conforme filtros, agora respeitando o modo Stories
+      function renderOverlay(img, canvas, leica, daido, exifText) {
+        // Detecta ratio selecionado
+        let ratio = 1;
+        let canvasW, canvasH;
+        const selected = document.querySelector('input[name="outputRatio"]:checked');
+        if (selected && selected.value === '9:16') {
+          ratio = 9/16;
+          canvasH = 1600;
+          canvasW = Math.round(canvasH * ratio);
+        } else {
+          canvasW = canvasH = 1200;
+        }
+        canvas.width = canvasW;
+        canvas.height = canvasH;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvasW, canvasH);
+        // Foto ocupa no máximo 90% do lado menor (moldura de 5% cada lado)
+        const maxFoto = Math.min(canvasW, canvasH) * 0.9;
+        let drawW = img.width, drawH = img.height;
+        const scale = Math.min(maxFoto / img.width, maxFoto / img.height);
+        drawW = img.width * scale;
+        drawH = img.height * scale;
+        const x = (canvasW - drawW) / 2;
+        const y = (canvasH - drawH) / 2;
+        ctx.drawImage(img, x, y, drawW, drawH);
+        if (leica) applyLeicaFilter(ctx, x, y, drawW, drawH);
+        if (daido) applyDaidoMoriyamaFilter(ctx, x, y, drawW, drawH);
+        // Desenha info EXIF se existir
+        if (exifText) {
+          ctx.save();
+          let fontSize = Math.round(canvasH * 0.018); // fonte bem sutil
+          ctx.font = fontSize + 'px sans-serif';
+          ctx.fillStyle = 'rgba(50,50,50,0.38)'; // cor sutil
+          ctx.textAlign = 'center';
+          let yInfo = canvasH - canvasH * 0.02; // padrão
+          if (canvasW / canvasH < 0.8) { // Stories (9:16)
+            yInfo = canvasH - canvasH * 0.13;
+          }
+          ctx.fillText(exifText, canvasW / 2, yInfo);
+          ctx.restore();
+        }
       }
 
       // Fecha overlay ao clicar no botão ou fora da imagem
@@ -438,7 +697,7 @@
         const zip = new JSZip();
         for (let i = 0; i < window._zipImages.length; i++) {
           if (typeof window._zipImages[i] === 'function') {
-            const dataUrl = window._zipImages[i]();
+            const dataUrl = await window._zipImages[i]();
             // Converte para blob
             const base64 = dataUrl.split(',')[1];
             zip.file(`foto-moldurada-1x1-${i+1}.png`, base64, {base64: true});
@@ -484,6 +743,23 @@
           navigator.serviceWorker.register('/service-worker.js')
             .then(function(reg) { console.log('Service Worker registrado!', reg); })
             .catch(function(err) { console.log('Erro ao registrar Service Worker:', err); });
+        });
+      }
+
+      // Atualiza todas as thumbs ao mudar o filtro Daido Moriyama ou Leica
+      document.getElementById('daidoMoriyama').addEventListener('change', updateAllThumbs);
+      document.getElementById('leicaBW').addEventListener('change', updateAllThumbs);
+      function updateAllThumbs() {
+        const daidoAtivo = document.getElementById('daidoMoriyama')?.checked;
+        const leicaAtivo = document.getElementById('leicaBW')?.checked;
+        const thumbs = document.querySelectorAll('#thumbsGrid canvas');
+        thumbs.forEach((canvas, idx) => {
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+          img.onload = function() {
+            renderThumb(img, canvas, leicaAtivo, daidoAtivo);
+          };
+          img.src = window._thumbSources[idx];
         });
       }
     </script>

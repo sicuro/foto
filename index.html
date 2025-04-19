@@ -507,9 +507,20 @@
         const distortData = ctx.getImageData(x, y, w, h);
         let d = distortData.data;
         let temp = new Uint8ClampedArray(d.length);
+        // Parâmetros para suavizar e randomizar a onda
+        let maxOffset = ultra ? 12 : 7; // menor intensidade padrão
         for (let j = 0; j < h; j++) {
-          // Ondas orgânicas (seno/cosseno + ruído)
-          let offset = Math.floor(Math.sin(j/16)*10 + Math.cos(j/6)*6 + (Math.random()-0.5)*6);
+          // Mais suave no centro, mais forte nas bordas
+          let distFromCenter = Math.abs(j - h/2) / (h/2);
+          let edgeBoost = 0.7 + 0.6 * distFromCenter; // mais forte nas bordas
+          // Randomização extra
+          let randomFactor = (Math.random()-0.5)*2;
+          // Offset menos regular, mistura seno, cosseno e ruído
+          let offset = Math.floor(
+            Math.sin(j/18 + randomFactor)*maxOffset*0.7*edgeBoost +
+            Math.cos(j/7 + randomFactor*2)*maxOffset*0.3*edgeBoost +
+            (Math.random()-0.5)*maxOffset*0.4*edgeBoost
+          );
           for (let i = 0; i < w; i++) {
             let srcI = i+offset;
             if (srcI<0 || srcI>=w) continue;
